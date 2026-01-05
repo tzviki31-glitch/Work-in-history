@@ -602,7 +602,7 @@
 </head>
 <body>
     <div id="main-menu">
-        <h1>🏛️ רומא העתיקה</h1>
+        <h1>🏛️  נפילת רומא העתיקה </h1>
         <p>שנת 80 לספירה. אתה מרקוס, חייל נאמן של הקיסר טיטוס. המגילה האבודה מכילה מידע סודי על קשר נגד הקיסר. הקונסול לוקיוס רודף אחריה, ואתה חייב למצוא אותה לפני שהוא. חצה את העיר הרומית, מצא רמזים, שוחח עם תושבים, ופתור את התעלומה!</p>
         <button class="start-btn" onclick="startGame()">התחל את המסע</button>
         <div id="gamepad-indicator">🎮 שלט זוהה! אתה יכול לשחק עם הג'ויסטיק</div>
@@ -1374,8 +1374,8 @@
             sunLight.shadow.camera.right = 500;
             sunLight.shadow.camera.top = 500;
             sunLight.shadow.camera.bottom = -500;
-            sunLight.shadow.mapSize.width = 4096;
-            sunLight.shadow.mapSize.height = 4096;
+            sunLight.shadow.mapSize.width = 2048;
+            sunLight.shadow.mapSize.height = 2048;
             sunLight.shadow.bias = -0.0001;
             scene.add(sunLight);
 
@@ -1707,9 +1707,9 @@
             group.userData = { type: 'house', info: 'house' };
             
             // הוספת אינדיקטור ויזואלי לגילוי
-            const discoveryGlow = new THREE.PointLight(0xd4af37, 0.3, 8);
-            discoveryGlow.position.set(0, height + 2, 0);
-            group.add(discoveryGlow);
+            // const discoveryGlow = new THREE.PointLight(0xd4af37, 0.3, 8);
+            // discoveryGlow.position.set(0, height + 2, 0);
+            // group.add(discoveryGlow);
             
             // סמל גילוי מעל הבית
             const discoveryMarker = new THREE.Mesh(
@@ -1835,9 +1835,9 @@
             group.userData = { type: 'temple', info: 'temple' };
             
             // הוספת אינדיקטור ויזואלי בולט למקדש
-            const templeGlow = new THREE.PointLight(0xd4af37, 0.6, 15);
-            templeGlow.position.set(0, 18, 0);
-            group.add(templeGlow);
+            // const templeGlow = new THREE.PointLight(0xd4af37, 0.6, 15);
+            // templeGlow.position.set(0, 18, 0);
+            // group.add(templeGlow);
             
             // סמל גילוי מעל המקדש
             const discoveryMarker = new THREE.Mesh(
@@ -1913,9 +1913,9 @@
             group.userData = { type: 'statue', info: 'statue' };
             
             // הוספת אינדיקטור ויזואלי לפסל
-            const statueGlow = new THREE.PointLight(0xd4af37, 0.4, 10);
-            statueGlow.position.set(0, 7.5, 0);
-            group.add(statueGlow);
+            // const statueGlow = new THREE.PointLight(0xd4af37, 0.4, 10);
+            // statueGlow.position.set(0, 7.5, 0);
+            // group.add(statueGlow);
             
             // סמל גילוי מעל הפסל
             const discoveryMarker = new THREE.Mesh(
@@ -1991,9 +1991,9 @@
             group.userData = { type: 'fountain', info: 'fountain' };
             
             // הוספת אינדיקטור ויזואלי למזרקה
-            const fountainGlow = new THREE.PointLight(0xd4af37, 0.4, 10);
-            fountainGlow.position.set(0, 4.5, 0);
-            group.add(fountainGlow);
+            // const fountainGlow = new THREE.PointLight(0xd4af37, 0.4, 10);
+            // fountainGlow.position.set(0, 4.5, 0);
+            // group.add(fountainGlow);
             
             // סמל גילוי מעל המזרקה
             const discoveryMarker = new THREE.Mesh(
@@ -2109,9 +2109,9 @@
             group.userData = { type: 'forum', info: 'forum' };
             
             // הוספת אינדיקטור ויזואלי בולט לפורום
-            const forumGlow = new THREE.PointLight(0xd4af37, 0.8, 25);
-            forumGlow.position.set(0, 20, 0);
-            group.add(forumGlow);
+            // const forumGlow = new THREE.PointLight(0xd4af37, 0.8, 25);
+            // forumGlow.position.set(0, 20, 0);
+            // group.add(forumGlow);
             
             // סמל גילוי מעל הפורום
             const discoveryMarker = new THREE.Mesh(
@@ -2191,9 +2191,9 @@
                 group.userData = { type: 'garden', info: 'garden' };
                 
                 // הוספת אינדיקטור ויזואלי לגן
-                const gardenGlow = new THREE.PointLight(0xd4af37, 0.4, 12);
-                gardenGlow.position.set(0, 5, 0);
-                group.add(gardenGlow);
+                // const gardenGlow = new THREE.PointLight(0xd4af37, 0.4, 12);
+                // gardenGlow.position.set(0, 5, 0);
+                // group.add(gardenGlow);
                 
                 // סמל גילוי מעל הגן
                 const discoveryMarker = new THREE.Mesh(
@@ -2296,9 +2296,9 @@
                 npcGroup.castShadow = true;
                 
                 // הוספת אינדיקטור ויזואלי בולט ל-NPC
-                const npcGlow = new THREE.PointLight(0x00ff00, 0.5, 12);
-                npcGlow.position.set(0, 3, 0);
-                npcGroup.add(npcGlow);
+                // const npcGlow = new THREE.PointLight(0x00ff00, 0.5, 12);
+                // npcGlow.position.set(0, 3, 0);
+                // npcGroup.add(npcGlow);
                 
                 // סמל NPC מעל הדמות
                 const npcMarker = new THREE.Mesh(
@@ -2874,7 +2874,7 @@
                 }
 
                 updateLocation();
-                updateMinimap();
+                if (renderer.info.render.frame % 3 === 0) updateMinimap();
             }
 
             if (window.clouds) {
