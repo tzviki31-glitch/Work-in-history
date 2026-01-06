@@ -598,6 +598,48 @@
             from { transform: translateX(-50%) translateY(-50px); opacity: 0; }
             to { transform: translateX(-50%) translateY(0); opacity: 1; }
         }
+
+        /* קונסולת פקודות */
+        #game-console {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 60px;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            z-index: 10000;
+            align-items: center;
+            padding: 0 20px;
+            border-bottom: 2px solid #00ff00;
+            direction: ltr; /* פקודות באנגלית */
+        }
+
+        #console-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            font-size: 1.5rem;
+            outline: none;
+            margin-left: 10px;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 24px;
+            height: 24px;
+            background: rgba(0, 0, 0, 0.5);
+            border: 1px solid #aaa;
+            color: #fff;
+            border-radius: 50%;
+            cursor: pointer;
+            z-index: 10;
+        }
+        .close-btn:hover { background: #ff4444; border-color: #ff4444; }
     </style>
 </head>
 <body>
@@ -627,6 +669,7 @@
         </div>
 
         <div id="mission-panel">
+            <button class="close-btn" onclick="toggleMissionPanel()">X</button>
             <h3>⚔️ המשימה</h3>
             <div id="mission-text">🎯 המשימה שלך: מצא 5 פריטים חשובים, פתור 3 חידות, שוחח עם 6 תושבים, וגלה 8 מקומות היסטוריים. התחל מהקולוסיאום במרכז העיר!</div>
         </div>
@@ -635,6 +678,7 @@
 
         <!-- מפה חדשה -->
         <div id="minimap-container">
+            <button class="close-btn" onclick="toggleMinimap()">X</button>
             <div id="minimap-header">🏛️ מפת רומא ויומן גילויים</div>
             <div id="minimap" style="height: 200px;">
                 <canvas id="minimap-canvas"></canvas>
@@ -676,6 +720,9 @@
             <div class="control-row">
                 <span class="key-badge">M</span> / <span class="gamepad-badge">Back</span> - הצג/הסתר מפה
             </div>
+                <div class="control-row">
+                <span class="key-badge">h</span> / <span class="gamepad-badge">אין</span> -מסך מלא ומסך לא מלא
+            </div>
         </div>
 
         <button id="audio-control" onclick="toggleAudio()">🔊 מוזיקה: פעיל</button>
@@ -685,6 +732,11 @@
     <div id="crosshair"></div>
     <div id="npc-indicator"></div>
     <div id="npc-name-indicator"></div>
+
+    <div id="game-console">
+        <span style="color: #00ff00; font-weight: bold; font-size: 1.5rem;">></span>
+        <input type="text" id="console-input" placeholder="Enter command (zviki...)" autocomplete="off">
+    </div>
 
     <script type="importmap">
     {
@@ -724,14 +776,26 @@
         let gamepadIndex = null;
         let gamepadConnected = false;
         let lastGamepadButtons = {};
+        let teleportLocations = [];
         
         const puzzles = new Map();
         let activePuzzle = null;
+        
+        let isConsoleOpen = false;
+        let isUIHidden = false;
 
         // Minimap
         let minimapCanvas, minimapCtx;
         let mapDiscoveries = [];
         let showMinimap = true;
+        let showMissionPanel = true;
+
+        // הגדרת גשרים
+        const bridges = [
+            { x: 0, width: 40 },      // גשר מרכזי (מול הקולוסיאום)
+            { x: -200, width: 30 },   // גשר מערבי (ליד הפורום)
+            { x: 200, width: 30 }     // גשר מזרחי
+        ];
         
         // מיקומי אובייקטים במפה
         const mapObjects = {
@@ -991,6 +1055,13 @@
             // Ensure canvas is visible if container is shown
             document.getElementById('minimap-canvas').style.display = showMinimap ? 'block' : 'none';
         }
+        window.toggleMinimap = toggleMinimap;
+
+        function toggleMissionPanel() {
+            showMissionPanel = !showMissionPanel;
+            document.getElementById('mission-panel').style.display = showMissionPanel ? 'block' : 'none';
+        }
+        window.toggleMissionPanel = toggleMissionPanel;
 
         // Minimap initialization
         function initMinimap() {
@@ -1409,6 +1480,7 @@
             createPuzzles(); // הוספת יצירת חידות
             createNPCs();
             createParticles();
+            createBridges(); // יצירת הגשרים
             createBackgroundMusic();
 
             window.clouds = createClouds();
@@ -1485,17 +1557,59 @@
             colosseumGroup.add(arena);
             interactiveObjects.push(arena);
 
-            // Inner wall
+            // Inner wall (Visual) - עם פתח ויזואלי
             const innerWall = new THREE.Mesh(
-                new THREE.CylinderGeometry(30, 30, 25, 64, 1, true),
+                new THREE.CylinderGeometry(30, 30, 25, 64, 1, true, 0.5, Math.PI * 2 - 1),
                 stoneMaterial
             );
             innerWall.position.y = 12.5;
+            innerWall.rotation.y = Math.PI / 2; // סיבוב הפתח לכיוון הגשר
             innerWall.receiveShadow = true;
-            innerWall.castShadow = true;
-            innerWall.userData = { isCollision: true };
             colosseumGroup.add(innerWall);
-            collisionObjects.push(innerWall);
+            
+            // קירות התנגשות בלתי נראים (כדי לאפשר כניסה)
+            const segmentCount = 12;
+            const wallRadius = 30;
+            for (let i = 0; i < segmentCount; i++) {
+                const angle = (i / segmentCount) * Math.PI * 2;
+                
+                // דילוג על הקטע של הכניסה (בזווית PI/2 שזה מול הגשר)
+                if (Math.abs(angle - Math.PI / 2) < 0.4) continue;
+
+                const segment = new THREE.Mesh(
+                    new THREE.BoxGeometry(16, 25, 2),
+                    new THREE.MeshBasicMaterial({ visible: false })
+                );
+                segment.position.set(
+                    Math.cos(angle) * wallRadius,
+                    12.5,
+                    Math.sin(angle) * wallRadius
+                );
+                segment.rotation.y = -angle;
+                segment.userData = { isCollision: true };
+                colosseumGroup.add(segment);
+                collisionObjects.push(segment);
+            }
+
+            // הוספת דלת סודית במרכז הארנה (לסיום המשחק)
+            const secretDoor = new THREE.Mesh(
+                new THREE.BoxGeometry(4, 0.5, 4),
+                new THREE.MeshStandardMaterial({ color: 0x8b4513, metalness: 0.8, roughness: 0.2 })
+            );
+            secretDoor.position.y = 1.1;
+            secretDoor.userData = { type: 'final_door', name: 'דלת סודית' };
+            colosseumGroup.add(secretDoor);
+            interactiveObjects.push(secretDoor);
+
+            // אינטראקציה עם הקולוסיאום מבחוץ (מעטפת בלתי נראית)
+            const colosseumInteraction = new THREE.Mesh(
+                new THREE.CylinderGeometry(55, 55, 30, 32, 1, true),
+                new THREE.MeshBasicMaterial({ color: 0xff0000, transparent: true, opacity: 0, side: THREE.DoubleSide })
+            );
+            colosseumInteraction.position.y = 15;
+            colosseumInteraction.userData = { type: 'building', info: 'colosseum' };
+            colosseumGroup.add(colosseumInteraction);
+            interactiveObjects.push(colosseumInteraction);
 
             scene.add(colosseumGroup);
             
@@ -1521,82 +1635,236 @@
             );
             ground.rotation.x = -Math.PI / 2;
             ground.receiveShadow = true;
+            
+            // הגדרת משתני הנהר (תיקון למסך השחור)
+            const riverWidth = 140;
+            const riverZ = 150;
+            const riverDepth = 18;
+
             const vertices = ground.geometry.attributes.position.array;
-            for (let i = 2; i < vertices.length; i += 3) {
-                vertices[i] += (Math.random() - 0.5) * 0.3;
+            for (let i = 0; i < vertices.length; i += 3) {
+                vertices[i+2] += (Math.random() - 0.5) * 0.3;
+                
+                // יצירת ערוץ הנהר
+                const localY = vertices[i+1];
+                const worldZ = -localY;
+                
+                const dist = Math.abs(worldZ - riverZ);
+                if (dist < riverWidth / 2 + 40) {
+                    let depthFactor = 0;
+                    if (dist < riverWidth / 2 - 10) {
+                        depthFactor = 1;
+                    } else {
+                        const edgeDist = dist - (riverWidth / 2 - 10);
+                        depthFactor = 1 - (edgeDist / 50);
+                        if (depthFactor < 0) depthFactor = 0;
+                        depthFactor = depthFactor * depthFactor * (3 - 2 * depthFactor);
+                    }
+                    vertices[i+2] -= depthFactor * riverDepth;
+                }
             }
             ground.geometry.attributes.position.needsUpdate = true;
             ground.geometry.computeVertexNormals();
             scene.add(ground);
 
-            // Houses
-            for (let i = 0; i < 60; i++) {
-                const house = createRomanHouse();
-                const angle = Math.random() * Math.PI * 2;
-                const distance = 80 + Math.random() * 400;
-                house.position.set(
-                    Math.cos(angle) * distance,
-                    0,
-                    Math.sin(angle) * distance
-                );
-                house.rotation.y = Math.random() * Math.PI * 2;
-                scene.add(house);
-            }
+            // --- תוספות חדשות: נהר, חומה, ורחובות מסודרים ---
 
-            // Temples
-            for (let i = 0; i < 8; i++) {
-                const temple = createTemple();
-                const angle = (i / 8) * Math.PI * 2;
-                const distance = 150 + Math.random() * 200;
-                temple.position.set(
-                    Math.cos(angle) * distance,
-                    0,
-                    Math.sin(angle) * distance
-                );
-                scene.add(temple);
-            }
+            // 1. נהר הטיבר (Tiber River) - משופר וריאליסטי
+            
+            // גיאומטריה עם חלוקה לפרטים עבור הגלים (Segments)
+            const waterGeometry = new THREE.PlaneGeometry(2000, riverWidth, 128, 32);
+            
+            const waterMaterial = new THREE.MeshStandardMaterial({
+                color: 0x006994, // כחול עמוק יותר
+                roughness: 0.1, // ברק של מים
+                metalness: 0.6,
+                emissive: 0x001e33,
+                emissiveIntensity: 0.2,
+                transparent: true,
+                opacity: 0.85,
+                side: THREE.DoubleSide
+            });
+            const river = new THREE.Mesh(waterGeometry, waterMaterial);
+            river.rotation.x = -Math.PI / 2;
+            river.position.set(0, -5, riverZ); // מים בתוך הערוץ
+            scene.add(river);
+            
+            // שמירת הנהר לשימוש באנימציה
+            window.river = river;
 
-            // Statues
-            for (let i = 0; i < 20; i++) {
-                const statue = createStatue();
-                const angle = Math.random() * Math.PI * 2;
-                const distance = 100 + Math.random() * 300;
-                statue.position.set(
-                    Math.cos(angle) * distance,
-                    0,
-                    Math.sin(angle) * distance
-                );
-                scene.add(statue);
-            }
+            // 2. חומת העיר (City Wall)
+            const wallSize = 900;
+            const wallHeight = 25;
+            const wallThickness = 8;
+            const wallColor = 0x8b7355;
+            
+            const wallGroup = new THREE.Group();
+            const wallMat = new THREE.MeshStandardMaterial({ color: wallColor, roughness: 0.9 });
+            
+            // יצירת 4 קירות
+            const walls = [
+                { pos: [0, wallHeight/2, -wallSize/2], size: [wallSize, wallHeight, wallThickness] },
+                { pos: [0, wallHeight/2, wallSize/2], size: [wallSize, wallHeight, wallThickness] },
+                { pos: [-wallSize/2, wallHeight/2, 0], size: [wallThickness, wallHeight, wallSize] },
+                { pos: [wallSize/2, wallHeight/2, 0], size: [wallThickness, wallHeight, wallSize] }
+            ];
 
-            // Fountains
-            for (let i = 0; i < 10; i++) {
-                const fountain = createFountain();
-                const angle = Math.random() * Math.PI * 2;
-                const distance = 120 + Math.random() * 250;
-                fountain.position.set(
-                    Math.cos(angle) * distance,
-                    0,
-                    Math.sin(angle) * distance
-                );
-                scene.add(fountain);
-            }
+            walls.forEach(w => {
+                const mesh = new THREE.Mesh(new THREE.BoxGeometry(...w.size), wallMat);
+                mesh.position.set(...w.pos);
+                mesh.userData = { isCollision: true };
+                wallGroup.add(mesh);
+                collisionObjects.push(mesh);
+            });
+            
+            scene.add(wallGroup);
 
-            // Columns
-            for (let i = 0; i < 30; i++) {
-                const column = createColumn();
-                const angle = Math.random() * Math.PI * 2;
-                const distance = 90 + Math.random() * 350;
-                column.position.set(
-                    Math.cos(angle) * distance,
-                    0,
-                    Math.sin(angle) * distance
-                );
-                scene.add(column);
+            // 3. בניית עיר ברשת (Grid) - בתים צפופים ורחובות
+            // עדכון: לא לבנות על הגשרים
+            const bridgeClearance = 30; // מרחק בטוח מהגשרים
+
+            const blockSize = 25; // גודל בלוק בניין
+            const streetGap = 10; // רוחב רחוב
+            const cityLimit = wallSize / 2 - 20;
+            
+            for (let x = -cityLimit; x < cityLimit; x += blockSize + streetGap) {
+                for (let z = -cityLimit; z < cityLimit; z += blockSize + streetGap) {
+                    
+                    // בדיקת מרחקים מאזורים חשובים
+                    const distToCenter = Math.sqrt(x*x + z*z);
+                    if (distToCenter < 90) continue; // לא לבנות על הקולוסיאום
+                    
+                    // לא לבנות על הנהר
+                    if (z > riverZ - 120 && z < riverZ + 120) continue;
+
+                    // לא לבנות בכניסה לגשרים
+                    let nearBridge = false;
+                    for (let b of bridges) {
+                        if (Math.abs(x - b.x) < b.width / 2 + bridgeClearance && Math.abs(z - riverZ) < 200) {
+                            nearBridge = true;
+                            break;
+                        }
+                    }
+                    if (nearBridge) continue;
+                    
+                    // לא לבנות על הפורום (נמצא ב -200, -200)
+                    const distToForum = Math.sqrt((x - (-200))**2 + (z - (-200))**2);
+                    if (distToForum < 70) continue;
+
+                    // הסתברות לבנייה
+                    if (Math.random() > 0.85) continue; 
+
+                    const rand = Math.random();
+                    let obj;
+                    
+                    // גיוון במבנים
+                    if (rand < 0.03) {
+                        obj = createTemple();
+                    } else if (rand < 0.06) {
+                        obj = createFountain();
+                    } else if (rand < 0.10) {
+                        obj = createStatue();
+                    } else if (rand < 0.15) {
+                        obj = createColumn();
+                    } else {
+                        obj = createRomanHouse();
+                    }
+
+                    // מיקום ברשת עם סטייה קלה למראה טבעי יותר
+                    obj.position.set(
+                        x + (Math.random() - 0.5) * 2,
+                        0,
+                        z + (Math.random() - 0.5) * 2
+                    );
+                    
+                    // סיבוב ב-90 מעלות כדי ליישר לרחובות
+                    const rot = Math.floor(Math.random() * 4) * (Math.PI / 2);
+                    obj.rotation.y = rot;
+                    
+                    scene.add(obj);
+                }
             }
 
             createForum();
             createGardens();
+        }
+
+        function createBridges() {
+            const riverZ = 150;
+            const riverWidth = 140;
+            const bridgeHeight = 6;
+            const bridgeLength = riverWidth + 20; // 160
+            const rampLength = 40;
+            
+            const bridgeMat = new THREE.MeshStandardMaterial({ 
+                color: 0x8b7355, 
+                roughness: 0.9,
+                map: createStoneTexture()
+            });
+            
+            const railingMat = new THREE.MeshStandardMaterial({ color: 0x5c4033, roughness: 0.8 });
+
+            bridges.forEach(b => {
+                const group = new THREE.Group();
+                
+                // משטח הגשר המרכזי (מוגבה)
+                const bridge = new THREE.Mesh(
+                    new THREE.BoxGeometry(b.width, 1, bridgeLength),
+                    bridgeMat
+                );
+                bridge.position.y = bridgeHeight; 
+                bridge.receiveShadow = true;
+                group.add(bridge);
+                
+                // רמפות
+                const rampGeo = new THREE.BoxGeometry(b.width, 1, Math.sqrt(rampLength**2 + bridgeHeight**2));
+                const rampAngle = Math.atan2(bridgeHeight, rampLength);
+                
+                const ramp1 = new THREE.Mesh(rampGeo, bridgeMat);
+                ramp1.position.set(0, bridgeHeight/2, -bridgeLength/2 - rampLength/2 + 2);
+                ramp1.rotation.x = -rampAngle;
+                group.add(ramp1);
+
+                const ramp2 = new THREE.Mesh(rampGeo, bridgeMat);
+                ramp2.position.set(0, bridgeHeight/2, bridgeLength/2 + rampLength/2 - 2);
+                ramp2.rotation.x = rampAngle;
+                group.add(ramp2);
+                
+                // מעקות
+                const railLeft = new THREE.Mesh(
+                    new THREE.BoxGeometry(2, 5, bridgeLength),
+                    railingMat
+                );
+                railLeft.position.set(-b.width/2 + 1, bridgeHeight + 2.5, 0);
+                group.add(railLeft);
+
+                const railRight = new THREE.Mesh(
+                    new THREE.BoxGeometry(2, 5, bridgeLength),
+                    railingMat
+                );
+                railRight.position.set(b.width/2 - 1, bridgeHeight + 2.5, 0);
+                group.add(railRight);
+                
+                // עמודים תומכים לגשר
+                for(let zOffset of [-40, 0, 40]) {
+                    const pillar = new THREE.Mesh(
+                        new THREE.CylinderGeometry(2, 2, bridgeHeight + 5, 8),
+                        bridgeMat
+                    );
+                    pillar.position.set(-b.width/2 + 4, bridgeHeight/2 - 2, zOffset);
+                    group.add(pillar);
+                    
+                    const pillar2 = new THREE.Mesh(
+                        new THREE.CylinderGeometry(2, 2, bridgeHeight + 5, 8),
+                        bridgeMat
+                    );
+                    pillar2.position.set(b.width/2 - 4, bridgeHeight/2 - 2, zOffset);
+                    group.add(pillar2);
+                }
+
+                group.position.set(b.x, 0, riverZ);
+                scene.add(group);
+            });
         }
 
         function createRomanHouse() {
@@ -2070,9 +2338,9 @@
             platform.receiveShadow = true;
             group.add(platform);
 
-            for (let i = 0; i < 16; i++) {
+            for (let i = 0; i < 12; i++) { // תיקון ל-12 עמודים כדי להתאים לחידה
                 const column = createColumn();
-                const angle = (i / 16) * Math.PI * 2;
+                const angle = (i / 12) * Math.PI * 2;
                 column.position.set(
                     Math.cos(angle) * 38,
                     0,
@@ -2136,9 +2404,25 @@
         function createGardens() {
             for (let i = 0; i < 5; i++) {
                 const group = new THREE.Group();
-                const angle = Math.random() * Math.PI * 2;
-                const distance = 200 + Math.random() * 300;
                 
+                // מציאת מיקום חוקי שלא בתוך הנהר
+                let x, z;
+                let validPosition = false;
+                for(let attempt = 0; attempt < 20; attempt++) {
+                    const angle = Math.random() * Math.PI * 2;
+                    const distance = 200 + Math.random() * 300;
+                    x = Math.cos(angle) * distance;
+                    z = Math.sin(angle) * distance;
+                    
+                    // בדיקה אם המיקום בתוך הנהר (בין 70 ל-230)
+                    if (z < 70 || z > 230) {
+                        validPosition = true;
+                        break;
+                    }
+                }
+                
+                if (!validPosition) continue;
+
                 for (let j = 0; j < 20; j++) {
                     const trunk = new THREE.Mesh(
                         new THREE.CylinderGeometry(0.3, 0.4, 4, 8),
@@ -2183,11 +2467,7 @@
                     group.add(flower);
                 }
 
-                group.position.set(
-                    Math.cos(angle) * distance,
-                    0,
-                    Math.sin(angle) * distance
-                );
+                group.position.set(x, 0, z);
                 group.userData = { type: 'garden', info: 'garden' };
                 
                 // הוספת אינדיקטור ויזואלי לגן
@@ -2326,9 +2606,10 @@
         }
 
         function createQuestItems() {
+            // עדכון מיקומים כדי שלא יהיו בתוך הנהר (Z=150, רוחב=140)
             const positions = [
-                [100, 1, 80], [-120, 1, -90], [180, 1, 120],
-                [-200, 1, 150], [250, 1, -180]
+                [100, 1, 60], [-120, 1, -90], [180, 1, 240],
+                [-200, 1, 260], [250, 1, -180]
             ];
             const names = ['מפתח זהב', 'מפתח כסף', 'מפתח ברונזה', 'מגילה עתיקה', 'חותם הקיסר'];
             const colors = [0xffd700, 0xc0c0c0, 0xcd7f32, 0xf5deb3, 0x8b0000];
@@ -2412,7 +2693,7 @@
                 position: [80, 0, -100],
                 question: 'כמה עמודים יש בפורום הרומאי?',
                 answer: '12',
-                hint: 'לך לפורום הרומאי (בצד הדרומי-מערבי של העיר) וספור את העמודים סביב הפלטפורמה. יש 16 עמודים סביב, אבל השאלה שואלת על מספר אחר... נסה לספור את העמודים בקפידה.',
+                hint: 'לך לפורום הרומאי (בצד הדרומי-מערבי של העיר) וספור את העמודים סביב הפלטפורמה. התשובה היא מספר העמודים המדויק.',
                 solved: false,
                 reward: 'מפתח המקדש'
             });
@@ -2420,10 +2701,10 @@
             // חידה 2: חידת היסטוריה
             puzzles.set('puzzle2', {
                 name: 'חידת הקיסר',
-                position: [-150, 0, 90],
+                position: [-150, 0, 60], // הוזז מחוץ לנהר
                 question: 'באיזו שנה הושלם הקולוסיאום?',
                 answer: '80',
-                hint: 'הקולוסיאום נבנה על ידי הקיסרים משושלת פלאביה. הבנייה החלה בשנת 72 לספירה והושלמה בשנת 80. חפש מידע היסטורי בקולוסיאום או שוחח עם תושבים.',
+                hint: 'חפש שלט אבן ליד הקולוסיאום עם ספרות רומיות (LXXX).',
                 solved: false,
                 reward: 'חותם הסנאט'
             });
@@ -2488,6 +2769,41 @@
                     collected: false
                 });
             });
+            
+            // הוספת שלט לחידה 2 (שנת 80)
+            const signGroup = new THREE.Group();
+            const signPost = new THREE.Mesh(
+                new THREE.BoxGeometry(0.5, 2, 0.5),
+                new THREE.MeshStandardMaterial({ color: 0x555555 })
+            );
+            signPost.position.y = 1;
+            signGroup.add(signPost);
+            
+            // יצירת טקסטורה לשלט
+            const canvas = document.createElement('canvas');
+            canvas.width = 256;
+            canvas.height = 128;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = '#888888';
+            ctx.fillRect(0, 0, 256, 128);
+            ctx.fillStyle = '#333333';
+            ctx.font = 'bold 60px serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('LXXX', 128, 64);
+            const signTexture = new THREE.CanvasTexture(canvas);
+
+            const signBoard = new THREE.Mesh(
+                new THREE.BoxGeometry(3, 1.5, 0.2),
+                new THREE.MeshStandardMaterial({ color: 0x888888, map: signTexture })
+            );
+            signBoard.position.y = 2;
+            signGroup.add(signBoard);
+            
+            // מיקום השלט ליד הקולוסיאום
+            signGroup.position.set(30, 0, 60);
+            signGroup.rotation.y = -Math.PI / 4;
+            scene.add(signGroup);
         }
         
         function openPuzzle(puzzleKey) {
@@ -2569,6 +2885,15 @@
                 
                 if (target.userData.type === 'puzzle') {
                     openPuzzle(target.userData.puzzleKey);
+                    return;
+                } else if (target.userData.type === 'final_door') {
+                    // בדיקת סיום משחק
+                    if (quests.size >= 5) {
+                        showInfo('🎉 סוף המשחק!', 'פתחת את הדלת הסודית ומצאת את המגילה האבודה! הצלת את הקיסר טיטוס והבטחת את עתיד רומא. כל הכבוד!');
+                        playSound('success');
+                    } else {
+                        showInfo('נעול', 'הדלת נעולה. עליך לאסוף את כל 5 הפריטים כדי לפתוח אותה.');
+                    }
                     return;
                 }
                 
@@ -2780,6 +3105,51 @@
             }
         }
 
+        function getGroundHeight(x, z) {
+            const riverZ = 150;
+            const riverWidth = 140;
+            const riverDepth = 18;
+            
+            let h = 0;
+            const dist = Math.abs(z - riverZ);
+
+            // בדיקה אם השחקן על גשר
+            if (dist < riverWidth / 2 + 40) {
+                for (let b of bridges) {
+                    if (Math.abs(x - b.x) < b.width / 2) {
+                        // חישוב גובה הגשר והרמפות
+                        const bridgeHeight = 6;
+                        const bridgeLength = riverWidth + 20; // 160
+                        const rampLength = 40;
+                        const distZ = Math.abs(z - riverZ);
+                        
+                        if (distZ < bridgeLength / 2) {
+                            return bridgeHeight;
+                        } else if (distZ < bridgeLength / 2 + rampLength) {
+                            // אינטרפולציה לירידה מהגשר
+                            const rampProgress = (distZ - bridgeLength / 2) / rampLength;
+                            return bridgeHeight * (1 - rampProgress);
+                        }
+                        // אם רחוק יותר, חוזר לקרקע רגילה (0 או נהר)
+                    }
+                }
+            }
+            
+            if (dist < riverWidth / 2 + 40) {
+                let depthFactor = 0;
+                if (dist < riverWidth / 2 - 10) {
+                    depthFactor = 1;
+                } else {
+                    const edgeDist = dist - (riverWidth / 2 - 10);
+                    depthFactor = 1 - (edgeDist / 50);
+                    if (depthFactor < 0) depthFactor = 0;
+                    depthFactor = depthFactor * depthFactor * (3 - 2 * depthFactor);
+                }
+                h -= depthFactor * riverDepth;
+            }
+            return h;
+        }
+
         function animate() {
             requestAnimationFrame(animate);
             const delta = clock.getDelta();
@@ -2819,7 +3189,10 @@
                     }
                 }
 
-                camera.position.y = playerHeight;
+                // התאמת גובה השחקן לפני הקרקע (כולל ירידה לנהר)
+                const groundH = getGroundHeight(camera.position.x, camera.position.z);
+                const walkHeight = Math.max(groundH, -6); // לא יורדים עמוק מדי במים
+                camera.position.y = walkHeight + playerHeight;
 
                 // NPC indicator
                 const npcIndicator = document.getElementById('npc-indicator');
@@ -2888,6 +3261,7 @@
 
         window.startGame = function() {
             document.getElementById('main-menu').style.display = 'none';
+            initTeleportLocations(); // אתחול רשימת ההשתגרות
             showStory(0);
         };
 
@@ -2904,6 +3278,172 @@
             document.getElementById('story-overlay').style.display = 'flex';
             currentStory = index;
         }
+        
+        function initTeleportLocations() {
+            teleportLocations = [];
+            // מיקומים קבועים
+            teleportLocations.push({ name: 'קולוסיאום (כניסה)', x: 0, y: 5, z: 60 });
+            teleportLocations.push({ name: 'ארנה (בפנים)', x: 0, y: 2, z: 0 });
+            teleportLocations.push({ name: 'פורום', x: -200, y: 2, z: -200 });
+            teleportLocations.push({ name: 'גשר מרכזי', x: 0, y: 2, z: 150 });
+            
+            const addedInfoTypes = new Set(['colosseum', 'arena', 'forum']); // אלה כבר הוספנו ידנית
+
+            // הוספה דינמית של אובייקטים אינטראקטיביים
+            interactiveObjects.forEach(obj => {
+                const pos = new THREE.Vector3();
+                obj.getWorldPosition(pos);
+
+                if (obj.userData.type === 'quest' || obj.userData.type === 'puzzle' || obj.userData.type === 'npc') {
+                    let name = obj.userData.name || (obj.userData.npcData ? obj.userData.npcData.name : 'Unknown');
+                    // בדיקה אם כבר קיים (למניעת כפילויות)
+                    if (!teleportLocations.some(l => l.name === name)) {
+                        teleportLocations.push({ 
+                            name: name, 
+                            x: pos.x, 
+                            y: pos.y, 
+                            z: pos.z 
+                        });
+                    }
+                }
+                // הוספת מיקומים לגילויים (רק אחד מכל סוג כדי לא להעמיס)
+                else if (obj.userData.info && !addedInfoTypes.has(obj.userData.info)) {
+                    addedInfoTypes.add(obj.userData.info);
+                    
+                    const hebrewNames = {
+                        'house': 'בית רומי (דוגמה)',
+                        'temple': 'מקדש (דוגמה)',
+                        'statue': 'פסל (דוגמה)',
+                        'fountain': 'מזרקה (דוגמה)',
+                        'garden': 'גנים (דוגמה)'
+                    };
+                    
+                    const name = hebrewNames[obj.userData.info] || obj.userData.info;
+                    
+                    teleportLocations.push({
+                        name: name,
+                        x: pos.x,
+                        y: pos.y,
+                        z: pos.z + 8 // קצת ליד כדי לא להיתקע בתוך האובייקט
+                    });
+                }
+            });
+        }
+
+        function toggleConsole() {
+            isConsoleOpen = !isConsoleOpen;
+            const consoleEl = document.getElementById('game-console');
+            const inputEl = document.getElementById('console-input');
+            
+            if (isConsoleOpen) {
+                consoleEl.style.display = 'flex';
+                inputEl.value = '';
+                inputEl.focus();
+                if (controls.isLocked) controls.unlock();
+            } else {
+                consoleEl.style.display = 'none';
+                if (!controls.isLocked && scene) controls.lock();
+            }
+        }
+
+        function processCommand() {
+            const input = document.getElementById('console-input');
+            const cmd = input.value.trim();
+            
+            // פקודת השתגרות t <מספר>
+            if (cmd.toLowerCase().startsWith('t ')) {
+                const arg = cmd.split(' ')[1];
+                if (arg === 'list') {
+                    // הדפסת רשימה לקונסול הדפדפן (למפתחים)
+                    console.log('Teleport Locations:');
+                    teleportLocations.forEach((l, i) => console.log(`${i+1}: ${l.name}`));
+                    showInfo('רשימת שיגור', 'פתח את ה-Console (F12) לראות את הרשימה המלאה, או נחש מספרים!');
+                } else {
+                    const index = parseInt(arg);
+                    if (!isNaN(index) && index > 0 && index <= teleportLocations.length) {
+                        const loc = teleportLocations[index - 1];
+                        camera.position.set(loc.x, loc.y + 2, loc.z);
+                        showInfo('השתגרות', `שוגרת ל: ${loc.name} (מספר ${index})`);
+                    } else {
+                        showInfo('שגיאה', `מיקום ${index} לא נמצא. נסה מספר בין 1 ל-${teleportLocations.length}`);
+                    }
+                }
+            } else if (cmd.toLowerCase() === 'add') {
+                // פקודת צ'יט להשלמת כל המשימות
+                
+                // 1. השלמת פריטים
+                for (let i = 1; i <= 5; i++) quests.add(`quest${i}`);
+                
+                // 2. השלמת NPCs
+                Object.values(npcs).forEach(n => npcsMet.add(n.name));
+                
+                // 3. השלמת גילויים
+                Object.keys(historicalInfo).forEach(k => discoveries.add(k));
+                
+                // 4. השלמת חידות
+                puzzles.forEach(p => p.solved = true);
+                
+                // עדכון ויזואלי - הסתרת פריטים ועדכון מפה
+                interactiveObjects.forEach(obj => {
+                    if (obj.userData.type === 'quest') {
+                        obj.visible = false;
+                        const q = mapObjects.quests.find(mq => mq.name === obj.userData.name);
+                        if (q) q.collected = true;
+                    }
+                });
+
+                updateQuestCount();
+                updateNPCCount();
+                updateDiscoveryCount();
+                
+                showInfo('צ׳יט הופעל', 'כל המשימות, הגילויים והשיחות הושלמו בהצלחה!');
+            } else if (cmd.toLowerCase().startsWith('zviki')) {
+                const parts = cmd.split(' ');
+                const action = parts[1] ? parts[1].toLowerCase() : '';
+                
+                if (action === 'tp') {
+                    // zviki tp x y z או zviki tp location
+                    if (parts.length === 5) {
+                        const x = parseFloat(parts[2]);
+                        const y = parseFloat(parts[3]);
+                        const z = parseFloat(parts[4]);
+                        if (!isNaN(x) && !isNaN(y) && !isNaN(z)) {
+                            camera.position.set(x, y, z);
+                            showInfo('פקודה בוצעה', `שוגרת ל: ${x}, ${y}, ${z}`);
+                        }
+                    } else if (parts.length === 3) {
+                        const loc = parts[2].toLowerCase();
+                        if (loc === 'forum') camera.position.set(-200, 2, -200);
+                        else if (loc === 'colosseum') camera.position.set(0, 5, 50);
+                        else if (loc === 'temple') camera.position.set(0, 5, 150);
+                        showInfo('פקודה בוצעה', `שוגרת ל: ${loc}`);
+                    }
+                } else if (action === 'map') {
+                    toggleMinimap();
+                } else if (action === 'ui') {
+                    toggleUI();
+                } else if (action === 'mission') {
+                    toggleMissionPanel();
+                } else if (action === 'submit' || action === 'finish') {
+                    // השלם את כל המשימות
+                    for (let i = 1; i <= 5; i++) quests.add(`quest${i}`);
+                    updateQuestCount();
+                    showInfo('צ׳יט הופעל', 'כל הפריטים הוגשו בהצלחה!');
+                }
+            }
+            
+            toggleConsole();
+        }
+
+        function toggleUI() {
+            isUIHidden = !isUIHidden;
+            const display = isUIHidden ? 'none' : 'block';
+            
+            document.getElementById('ui-layer').style.display = display;
+            document.getElementById('crosshair').style.display = display;
+            document.getElementById('npc-indicator').style.display = isUIHidden ? 'none' : '';
+            document.getElementById('npc-name-indicator').style.display = 'none';
+        }
 
         window.continueStory = function() {
             showStory(currentStory + 1);
@@ -2918,6 +3458,16 @@
                 case 'KeyE': handleInteraction(); break;
                 case 'KeyV': toggleViewMode(); break;
                 case 'KeyM': toggleMinimap(); break;
+                case 'Backquote': // מקש טילדה ~
+                    e.preventDefault();
+                    toggleConsole(); 
+                    break;
+                case 'KeyH': // הסתרת ממשק
+                    if (!isConsoleOpen) toggleUI();
+                    break;
+                case 'Enter':
+                    if (isConsoleOpen) processCommand();
+                    break;
                 case 'Escape': 
                     if (controls.isLocked) {
                         controls.unlock();
