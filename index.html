@@ -1637,7 +1637,7 @@
             ground.receiveShadow = true;
             
             // הגדרת משתני הנהר (תיקון למסך השחור)
-            const riverWidth = 140;
+            const riverWidth = 100;
             const riverZ = 150;
             const riverDepth = 18;
 
@@ -1735,7 +1735,7 @@
                     if (distToCenter < 90) continue; // לא לבנות על הקולוסיאום
                     
                     // לא לבנות על הנהר
-                    if (z > riverZ - 120 && z < riverZ + 120) continue;
+                    if (z > riverZ - 100 && z < riverZ + 100) continue;
 
                     // לא לבנות בכניסה לגשרים
                     let nearBridge = false;
@@ -1791,8 +1791,8 @@
 
         function createBridges() {
             const riverZ = 150;
-            const riverWidth = 140;
-            const bridgeHeight = 6;
+            const riverWidth = 100;
+            const bridgeHeight = 2.0;
             const bridgeLength = riverWidth + 20; // 160
             const rampLength = 40;
             
@@ -2414,8 +2414,8 @@
                     x = Math.cos(angle) * distance;
                     z = Math.sin(angle) * distance;
                     
-                    // בדיקה אם המיקום בתוך הנהר (בין 70 ל-230)
-                    if (z < 70 || z > 230) {
+                    // בדיקה אם המיקום בתוך הנהר (בין 60 ל-240)
+                    if (z < 60 || z > 240) {
                         validPosition = true;
                         break;
                     }
@@ -2608,7 +2608,7 @@
         function createQuestItems() {
             // עדכון מיקומים כדי שלא יהיו בתוך הנהר (Z=150, רוחב=140)
             const positions = [
-                [100, 1, 60], [-120, 1, -90], [180, 1, 240],
+                [100, 1, 20], [-120, 1, -90], [180, 1, 280],
                 [-200, 1, 260], [250, 1, -180]
             ];
             const names = ['מפתח זהב', 'מפתח כסף', 'מפתח ברונזה', 'מגילה עתיקה', 'חותם הקיסר'];
@@ -2701,7 +2701,7 @@
             // חידה 2: חידת היסטוריה
             puzzles.set('puzzle2', {
                 name: 'חידת הקיסר',
-                position: [-150, 0, 60], // הוזז מחוץ לנהר
+                position: [-150, 0, 20], // הוזז מחוץ לנהר
                 question: 'באיזו שנה הושלם הקולוסיאום?',
                 answer: '80',
                 hint: 'חפש שלט אבן ליד הקולוסיאום עם ספרות רומיות (LXXX).',
@@ -2878,10 +2878,15 @@
 
             if (intersects.length > 0) {
                 let obj = intersects[0].object;
-                while (obj.parent && !obj.parent.userData.type && obj.parent !== scene) {
-                    obj = obj.parent;
+                
+                // תיקון: בדיקה קודם אם לאובייקט עצמו יש מידע לפני שמחפשים בהורים
+                let target = obj;
+                if (!target.userData.type && !target.userData.quest && !target.userData.info && !target.userData.npcData) {
+                    while (obj.parent && !obj.parent.userData.type && obj.parent !== scene) {
+                        obj = obj.parent;
+                    }
+                    target = obj.parent && obj.parent.userData.type ? obj.parent : obj;
                 }
-                const target = obj.parent && obj.parent.userData.type ? obj.parent : obj;
                 
                 if (target.userData.type === 'puzzle') {
                     openPuzzle(target.userData.puzzleKey);
@@ -3107,7 +3112,7 @@
 
         function getGroundHeight(x, z) {
             const riverZ = 150;
-            const riverWidth = 140;
+            const riverWidth = 100;
             const riverDepth = 18;
             
             let h = 0;
@@ -3118,7 +3123,7 @@
                 for (let b of bridges) {
                     if (Math.abs(x - b.x) < b.width / 2) {
                         // חישוב גובה הגשר והרמפות
-                        const bridgeHeight = 6;
+                        const bridgeHeight = 2.0;
                         const bridgeLength = riverWidth + 20; // 160
                         const rampLength = 40;
                         const distZ = Math.abs(z - riverZ);
@@ -3261,14 +3266,16 @@
 
         window.startGame = function() {
             document.getElementById('main-menu').style.display = 'none';
-            initTeleportLocations(); // אתחול רשימת ההשתגרות
             showStory(0);
         };
 
         function showStory(index) {
             if (index >= story.length) {
                 document.getElementById('story-overlay').style.display = 'none';
-                if (!scene) init();
+                if (!scene) {
+                    init();
+                    initTeleportLocations(); // אתחול רשימת ההשתגרות לאחר יצירת העולם
+                }
                 setTimeout(() => controls.lock(), 100);
                 return;
             }
@@ -3280,11 +3287,12 @@
         }
         
         function initTeleportLocations() {
+            if (scene) scene.updateMatrixWorld(true); // עדכון מיקומים בעולם לפני חישוב
             teleportLocations = [];
-            // מיקומים קבועים
-            teleportLocations.push({ name: 'קולוסיאום (כניסה)', x: 0, y: 5, z: 60 });
-            teleportLocations.push({ name: 'ארנה (בפנים)', x: 0, y: 2, z: 0 });
-            teleportLocations.push({ name: 'פורום', x: -200, y: 2, z: -200 });
+            // מיקומים קבועים - שימוש בשמות מתוך historicalInfo
+            if (historicalInfo.colosseum) teleportLocations.push({ name: historicalInfo.colosseum.title, x: 0, y: 5, z: 60 });
+            if (historicalInfo.arena) teleportLocations.push({ name: historicalInfo.arena.title, x: 0, y: 2, z: 0 });
+            if (historicalInfo.forum) teleportLocations.push({ name: historicalInfo.forum.title, x: -200, y: 2, z: -200 });
             teleportLocations.push({ name: 'גשר מרכזי', x: 0, y: 2, z: 150 });
             
             const addedInfoTypes = new Set(['colosseum', 'arena', 'forum']); // אלה כבר הוספנו ידנית
@@ -3308,24 +3316,17 @@
                 }
                 // הוספת מיקומים לגילויים (רק אחד מכל סוג כדי לא להעמיס)
                 else if (obj.userData.info && !addedInfoTypes.has(obj.userData.info)) {
-                    addedInfoTypes.add(obj.userData.info);
-                    
-                    const hebrewNames = {
-                        'house': 'בית רומי (דוגמה)',
-                        'temple': 'מקדש (דוגמה)',
-                        'statue': 'פסל (דוגמה)',
-                        'fountain': 'מזרקה (דוגמה)',
-                        'garden': 'גנים (דוגמה)'
-                    };
-                    
-                    const name = hebrewNames[obj.userData.info] || obj.userData.info;
-                    
-                    teleportLocations.push({
-                        name: name,
-                        x: pos.x,
-                        y: pos.y,
-                        z: pos.z + 8 // קצת ליד כדי לא להיתקע בתוך האובייקט
-                    });
+                    // בדיקה אם קיים מידע היסטורי עבור סוג זה
+                    if (historicalInfo[obj.userData.info]) {
+                        addedInfoTypes.add(obj.userData.info);
+                        
+                        teleportLocations.push({
+                            name: historicalInfo[obj.userData.info].title,
+                            x: pos.x,
+                            y: pos.y,
+                            z: pos.z + 10 // קצת ליד כדי לא להיתקע בתוך האובייקט
+                        });
+                    }
                 }
             });
         }
@@ -3354,10 +3355,12 @@
             if (cmd.toLowerCase().startsWith('t ')) {
                 const arg = cmd.split(' ')[1];
                 if (arg === 'list') {
-                    // הדפסת רשימה לקונסול הדפדפן (למפתחים)
-                    console.log('Teleport Locations:');
-                    teleportLocations.forEach((l, i) => console.log(`${i+1}: ${l.name}`));
-                    showInfo('רשימת שיגור', 'פתח את ה-Console (F12) לראות את הרשימה המלאה, או נחש מספרים!');
+                    // הצגת הרשימה בחלונית המידע
+                    let listText = 'מקומות זמינים:\n';
+                    teleportLocations.forEach((l, i) => {
+                        listText += `${i+1}. ${l.name}\n`;
+                    });
+                    showInfo('רשימת שיגור', listText);
                 } else {
                     const index = parseInt(arg);
                     if (!isNaN(index) && index > 0 && index <= teleportLocations.length) {
