@@ -645,7 +645,7 @@
 <body>
     <div id="main-menu">
         <h1>🏛️  נפילת רומא העתיקה </h1>
-        <p>שנת 80 לספירה. אתה מרקוס, חייל נאמן של הקיסר טיטוס. המגילה האבודה מכילה מידע סודי על קשר נגד הקיסר. הקונסול לוקיוס רודף אחריה, ואתה חייב למצוא אותה לפני שהוא. חצה את העיר הרומית, מצא רמזים, שוחח עם תושבים, ופתור את התעלומה!</p>
+        <p>שנת 476 לספירה. אתה מרקוס, חייל נאמן של הקיסר טיטוס. המגילה האבודה מכילה מידע סודי על קשר נגד הקיסר. הקונסול לוקיוס רודף אחריה, ואתה חייב למצוא אותה לפני שהוא. חצה את העיר הרומית, מצא רמזים, שוחח עם תושבים, ופתור את התעלומה!</p>
         <button class="start-btn" onclick="startGame()">התחל את המסע</button>
         <div id="gamepad-indicator">🎮 שלט זוהה! אתה יכול לשחק עם הג'ויסטיק</div>
     </div>
@@ -660,7 +660,7 @@
         <div id="hud">
             <h3>📜 מידע היסטורי</h3>
             <div id="location-name">מיקום: שער העיר</div>
-            <div id="year">שנה: 80 לספירה</div>
+            <div id="year">שנה: 476 לספירה</div>
             <div id="discoveries" style="margin-top: 15px;">
                 <div>גילויים: <span id="discovery-count">0</span>/8</div>
                 <div style="margin-top: 10px;">משימות: <span id="quest-count">0</span>/5</div>
@@ -725,7 +725,7 @@
             </div>
         </div>
 
-        <button id="audio-control" onclick="toggleAudio()">🔊 מוזיקה: פעיל</button>
+        <button id="audio-control" style="display: none;" onclick="toggleAudio()">🔊 מוזיקה: פעיל</button>
     </div>
 
     <div id="discovery-notification"></div>
@@ -907,35 +907,35 @@
         const historicalInfo = {
             colosseum: {
                 title: "הקולוסיאום - אמפיתיאטרון פלאביוס",
-                text: "הקולוסיאום נבנה בין השנים 72-80 לספירה על ידי הקיסרים משושלת פלאביה. הוא יכול היה להכיל כ-50,000 צופים והיה הגדול ביותר באימפריה הרומית."
+                text: "הקולוסיאום נבנה בין השנים 72-80 לספירה על ידי הקיסרים משושלת פלאביה (אספסיאנוס וטיטוס). הוא יכול היה להכיל כ-50,000 צופים והיה הגדול ביותר באימפריה הרומית. (מקור: אנציקלופדיה בריטניקה)"
             },
             arena: {
                 title: "הארנה",
-                text: "הארנה הייתה רצפת העץ של הקולוסיאום, בגודל של כ-83 מטר על 48 מטר. מתחת לארנה היו מבוכים תת-קרקעיים ששימשו לאחסון חיות וציוד."
+                text: "הארנה הייתה רצפת העץ של הקולוסיאום, בגודל של כ-83 מטר על 48 מטר. מתחת לארנה היו מבוכים תת-קרקעיים (היפוגאום) ששימשו לאחסון חיות וציוד. (מקור: Colosseum.net)"
             },
             temple: {
                 title: "מקדש יופיטר",
-                text: "מקדש יופיטר היה המקדש החשוב ביותר ברומא. הוא הוקדש לאל הראשי של הפנתיאון הרומי ונבנה על גבעת הקפיטולין."
+                text: "מקדש יופיטר אופטימוס מקסימוס היה המקדש החשוב ביותר ברומא. הוא הוקדש לאל הראשי של הפנתיאון הרומי ונבנה על גבעת הקפיטולין. (מקור: World History Encyclopedia)"
             },
             forum: {
                 title: "הפורום הרומי",
-                text: "הפורום הרומי היה המרכז הפוליטי, הדתי והמסחרי של רומא העתיקה. כאן נערכו נאומים, משפטים, וטקסים דתיים."
+                text: "הפורום הרומי היה המרכז הפוליטי, הדתי והמסחרי של רומא העתיקה. כאן נערכו נאומים, משפטים, וטקסים דתיים. (מקור: History.com)"
             },
             house: {
-                title: "בית רומי",
-                text: "הבתים הרומיים (domus) היו בתים פרטיים של עשירים. הם כללו אטריום (חצר פנימית), טריקליניום (חדר אוכל), וחדרים פרטיים."
+                title: "בית רומי (Domus)",
+                text: "הבתים הרומיים (domus) היו בתים פרטיים של עשירים. הם כללו אטריום (חצר פנימית), טריקליניום (חדר אוכל), וחדרים פרטיים מעוטרים בפרסקו. (מקור: Khan Academy)"
             },
             fountain: {
                 title: "מזרקה רומית",
-                text: "המזרקות הרומיות סיפקו מים לתושבי העיר. מערכת האקוודוקטים הרומית הייתה מהמתקדמות בעולם העתיק."
+                text: "המזרקות הרומיות סיפקו מים לתושבי העיר. מערכת האקוודוקטים הרומית הייתה מהמתקדמות בעולם העתיק והובילה מים ממרחקים. (מקור: Roman Aqueducts Project)"
             },
             statue: {
                 title: "פסל רומי",
-                text: "הפסלים הרומיים שימשו לזיכרון, פולחן, וקישוט. פסלי הקיסרים הוצבו ברחבי העיר כדי להזכיר את כוחם."
+                text: "הפסלים הרומיים שימשו לזיכרון, פולחן, וקישוט. פסלי הקיסרים הוצבו ברחבי העיר כדי להזכיר את כוחם ולעיתים קרובות נצבעו בצבעים עזים. (מקור: מוזיאון המטרופוליטן)"
             },
             garden: {
-                title: "גן רומי",
-                text: "הגנים הרומיים (horti) היו מקומות מפוארים עם צמחייה, פסלים, ומזרקות. הם שימשו למנוחה ובידור."
+                title: "גן רומי (Horti)",
+                text: "הגנים הרומיים (horti) היו מקומות מפוארים עם צמחייה, פסלים, ומזרקות. הם שימשו למנוחה ובידור עבור עשירי רומא. (מקור: Gardens of the Roman Empire)"
             }
         };
 
@@ -1208,24 +1208,7 @@
         function createBackgroundMusic() {
             try {
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                const oscillator = audioContext.createOscillator();
-                const gainNode = audioContext.createGain();
-                const filter = audioContext.createBiquadFilter();
-                
-                oscillator.connect(filter);
-                filter.connect(gainNode);
-                gainNode.connect(audioContext.destination);
-                
-                oscillator.type = 'sine';
-                oscillator.frequency.setValueAtTime(110, audioContext.currentTime);
-                
-                filter.type = 'lowpass';
-                filter.frequency.value = 800;
-                
-                gainNode.gain.setValueAtTime(0.08, audioContext.currentTime);
-                
-                oscillator.start();
-                backgroundMusic = { oscillator, gainNode, filter };
+                // הוסר הצפצוף המעצבן (האוסצילטור)
             } catch (e) {
                 console.log('מוזיקה לא זמינה');
             }
@@ -1233,13 +1216,7 @@
 
         function toggleAudio() {
             if (!audioContext) return;
-            if (isAudioPlaying) {
-                backgroundMusic.gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-                document.getElementById('audio-control').innerText = '🔇 מוזיקה: כבוי';
-            } else {
-                backgroundMusic.gainNode.gain.exponentialRampToValueAtTime(0.08, audioContext.currentTime + 0.5);
-                document.getElementById('audio-control').innerText = '🔊 מוזיקה: פעיל';
-            }
+            // פונקציה זו כרגע לא עושה כלום כי הסרנו את מוזיקת הרקע
             isAudioPlaying = !isAudioPlaying;
         }
 
