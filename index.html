@@ -3509,12 +3509,6 @@
                 if (renderer.info.render.frame % 3 === 0) updateMinimap();
             }
             
-            // תיקון קבוע לרצפה בטלפון - איפוס גלגול המצלמה בכל פריים
-            if (isMobileMode && camera) {
-                camera.rotation.z = 0;
-                camera.rotation.x = 0; // קיבוע המבט לאופק (ביטול למעלה/למטה)
-            }
-
             if (window.clouds) {
                 window.clouds.children.forEach(c => {
                     c.position.x += 0.05;
@@ -3681,14 +3675,17 @@
                 const lookZone = document.getElementById('touch-look-zone');
                 let lastLookX = 0, lastLookY = 0;
                 let lookTouchId = null;
+                const LOOK_SENSITIVITY = 0.002;
 
                 lookZone.addEventListener('touchstart', (e) => {
-                    lookTouchId = e.changedTouches[0].identifier;
-                    lastLookX = e.changedTouches[0].clientX;
-                    lastLookY = e.changedTouches[0].clientY;
+                    const touch = e.changedTouches[0];
+                    lookTouchId = touch.identifier;
+                    lastLookX = touch.clientX;
+                    lastLookY = touch.clientY;
                 }, { passive: false });
 
                 lookZone.addEventListener('touchmove', (e) => {
+                    e.preventDefault(); // מניעת הפרעות דפדפן בזמן הזזת המבט
                     let touch = null;
                     for (let i = 0; i < e.changedTouches.length; i++) {
                         if (e.changedTouches[i].identifier === lookTouchId) {
@@ -3703,10 +3700,15 @@
                     lastLookX = touch.clientX;
                     lastLookY = touch.clientY;
 
-                    // סיבוב המצלמה
-                    camera.rotation.y -= dx * 0.005;
-                    camera.rotation.x -= dy * 0.005;
-                    camera.rotation.x = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, camera.rotation.x));
+                    // עדכון משתנים גלובליים לסיבוב (הפרדה מוחלטת)
+                    cameraRotationY -= dx * LOOK_SENSITIVITY;
+                    cameraRotationX -= dy * LOOK_SENSITIVITY;
+                    cameraRotationX = Math.max(-Math.PI / 2, Math.min(Math.PI / 2, cameraRotationX));
+
+                    // יישום הסיבוב על המצלמה בצורה נקייה
+                    camera.rotation.order = 'YXZ';
+                    camera.rotation.y = cameraRotationY;
+                    camera.rotation.x = cameraRotationX;
                 }, { passive: false });
 
                 // כפתורים
